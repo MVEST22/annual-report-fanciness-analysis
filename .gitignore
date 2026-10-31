@@ -9,3 +9,5 @@ results/
 private_data/
 *.xlsx
 !examples/*.xlsx
+
+report_manifest.csv
