@@ -17,6 +17,26 @@ This project studies the association between visual sophistication of annual rep
 - `report_manifest_template.csv` — template for PDF report identification
 - `requirements.txt` — Python dependencies
 
+
+## Discover annual reports (next stage)
+
+The **139-company Orbis list is preliminary**, not proof every company remains listed.
+Keep the original financial workbook and full company manifest locally rather than committing them to this public repository.
+
+Download the previously prepared `report_manifest.csv` from the private classifier package and place it alongside these scripts. It should have the columns `company_name,bvd_id,report_url,report_year`.
+
+Search for candidate publicly available PDFs with:
+
+```powershell
+.\.venv\Scripts\python.exe discover_reports.py --limit 5
+```
+
+The script uses public search results and HTML links to find **candidates**, checks whether links return PDF bytes, and creates `report_candidates.csv`. A verified PDF link is **not** proof that it is the latest report, is a complete annual report, or belongs to the right issuer. Check each candidate against the company's investor-relations website, confirm the year and listing status, and then manually copy the accepted HTTPS PDF URL and annual year into your local `report_manifest.csv`. Never assume that a report from search is correct merely because its URL contains "annual report".
+
+When the first few entries are validated, run `classify_reports.py --limit 2`, review the vision model's definition before accepting, and inspect the results. The process samples pages 1, 3, 6 and 10; these are not a substitute for reviewing an entire PDF and can miss the report's best graphical material.
+
+**Example of a verified official 2025 PDF:** Vestas: https://www.vestas.com/content/dam/vestas-com/global/en/investor/reports-and-presentations/financial/2025/fy-2025/Vestas%20Annual%20Report%202025.pdf.coredownload.inline.pdf
+
 ## Setup
 Install [Ollama](https://ollama.com/) and download the free local vision model:
 
