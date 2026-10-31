@@ -11,3 +11,5 @@ private_data/
 !examples/*.xlsx
 
 report_manifest.csv
+
+report_candidates.csv
