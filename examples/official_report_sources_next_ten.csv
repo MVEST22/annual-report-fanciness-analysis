@@ -1,0 +1,11 @@
+company_name,bvd_id,report_year,official_source_page,link_status
+ISS A/S,DK28504799,2025,https://www.issworld.com/investors/financial-reports,PDF still needs extraction
+ORSTED A/S,DK36213728,2025,https://orsted.com/en/investors/financial-reports,Direct PDF in local manifest
+DANSKE BANK A/S,DK61126228,2025,https://danskebank.com/news-and-insights/news-archive/press-releases/2026/pr05022026,Direct PDF in local manifest
+TRYG A/S,DK26460212,2025,https://tryg.com/en/downloads-2025,Direct PDF in local manifest
+SCHOUW & CO A/S,DK63965812,2025,https://www.schouw.com/investors/financial-reports-and-presentations,Direct PDF in local manifest
+PANDORA A/S,DK28505116,2025,https://www.pandoragroup.com/news/27816,Direct PDF endpoint in local manifest
+NOVOZYMES A/S,DK10007127,2025,https://www.novonesis.com/en/node/944,Direct PDF in local manifest; verify former Novozymes mapping
+DFDS A/S,DK14194711,2025,https://www.dfds.com/en/about/investors/reports-and-presentations,Direct PDF in local manifest
+ROCKWOOL A/S,DK54879415,2025,https://www.rockwool.com/group/about-us/investors/financial-reports/annual-report-highlights-2025/,Direct PDF in local manifest
+COLOPLAST A/S,DK69749917,2025,https://www.coloplast.com/Investor-Relations/Annual-reports/,Direct FY2024/25 PDF in local manifest
