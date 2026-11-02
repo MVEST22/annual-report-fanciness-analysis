@@ -27,7 +27,7 @@ def dig(obj,key):
         for x in obj:yield from dig(x,key)
 
 def dateonly(v):
-    if isinstance(v,str) and re.match(r'^20\\d\\d-\\d\\d-\\d\\d',v):return v[:10]
+    if isinstance(v,str) and re.match(r'^20\d\d-\d\d-\d\d',v):return v[:10]
     return ''
 
 def pick_doc(hit):
@@ -135,7 +135,7 @@ def main():
                     with pymupdf.open(target) as pdf:
                         out['pdf_pages']=len(pdf)
                     out['status']='already_present'
-                elif not re.fullmatch(r'\\d{8}',cvr):
+                elif not re.fullmatch(r'\d{8}',cvr):
                     out['status']='not_danish_cvr'
                 else:
                     hits=search(sess,cvr,args.timeout)
