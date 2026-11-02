@@ -115,7 +115,8 @@ def main():
     p.add_argument('--out',default=str(ROOT/'cvr_download_log.csv'))
     p.add_argument('--year',type=int,default=2025)
     p.add_argument('--limit',type=int,default=0)
-    p.add_argument('--timeout',type=int,default=30)
+    p.add_argument('--timeout',type=int,default=10)
+    p.add_argument('--max-consecutive-errors',type=int,default=3)
     p.add_argument('--max-mb',type=int,default=80)
     p.add_argument('--delay',type=float,default=1.0)
     args=p.parse_args()
@@ -124,6 +125,7 @@ def main():
     assert len(rows)>0 and {'bvd_id','cvr_number','company_name'}.issubset(rows[0])
     reportdir=ROOT/'reports';reportdir.mkdir(exist_ok=True)
     results=[]
+    consecutive_errors=0
     with requests.Session() as sess:
         for i,row in enumerate(rows[:args.limit or len(rows)],1):
             cvr=(row.get('cvr_number') or '').strip()
@@ -149,9 +151,16 @@ def main():
             except Exception as exc:
                 out['status']='error'
                 out['error']=str(exc)[:350]
+            if out['status']=='error':
+                consecutive_errors+=1
+            elif out['status'] not in ('already_present','not_danish_cvr'):
+                consecutive_errors=0
             results.append(out)
             write_log(results,Path(args.out))
             print(f"[{i}/{min(len(rows),args.limit or len(rows))}] {row['company_name']}: {out['status']} {out.get('error','')}",flush=True)
+            if consecutive_errors>=args.max_consecutive_errors:
+                print(f'STOP: {consecutive_errors} consecutive CVR errors. Check log before retrying.',flush=True)
+                break
             if out['status'] not in ('already_present','not_danish_cvr'):
                 time.sleep(max(0,args.delay))
     print('Status totals:')
