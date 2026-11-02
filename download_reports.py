@@ -88,7 +88,7 @@ def main():
                 out['download_status']='already_present'
             elif not row.get('report_url','').strip():
                 out['download_status']='missing_approved_url'
-            elif not re.fullmatch(r'20\d{2}',str(row.get('report_year','')).strip()):
+            elif not re.fullmatch(r'20\d{2}(?:[/-](?:20)?\d{2})?',str(row.get('report_year','')).strip()):
                 out['download_status']='missing_validated_year'
             else:
                 out['pdf_pages']=download(row['report_url'].strip(),target,args.timeout,args.max_mb*1024*1024)
