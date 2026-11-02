@@ -50,16 +50,16 @@ def download(url, path):
     path.write_bytes(data)
 
 def score_pdf(path, fast=False):
-    # Process only two lower-resolution pages per request to avoid oversized prompts.
+    # Sample cover, early pages, middle and later report sections to better capture visual design.
     # The same page-selection rule is applied to every company.
     with pymupdf.open(path) as doc:
         if not len(doc): raise ValueError('Empty PDF')
-        ids=sorted(set(min(x,len(doc)-1) for x in ([0] if fast else [0,5])))
+        ids=sorted(set(min(x,len(doc)-1) for x in ([0] if fast else [0, 5, max(0,len(doc)//2), max(0,int(len(doc)*0.75))])))
         imgs=[]
         for i in ids:
             page=doc[i]
-            pix=page.get_pixmap(matrix=pymupdf.Matrix(0.40 if fast else 0.65,0.40 if fast else 0.65),alpha=False)
-            imgs.append(base64.b64encode(pix.tobytes('jpeg',jpg_quality=45 if fast else 65)).decode('ascii'))
+            pix=page.get_pixmap(matrix=pymupdf.Matrix(0.40 if fast else 0.50,0.40 if fast else 0.50),alpha=False)
+            imgs.append(base64.b64encode(pix.tobytes('jpeg',jpg_quality=45 if fast else 55)).decode('ascii'))
     prompt=('Evaluate these annual report page images using the rubric: '+RUBRIC+
         ' Respond as JSON only, with integer fields graphic_design, typography, '+
         'photography_illustrations, charts_visualization, layout_storytelling '+
