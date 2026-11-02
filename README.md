@@ -69,3 +69,9 @@ The script writes statistical output locally in `results/`. It estimates `profit
 **Do not publicly upload the Orbis financial export, linked financial dataset, or other licensed records without checking SDU's database terms.** This repository intentionally includes only source code, documentation, and blank templates. Report PDFs may have separate rights and are excluded from version control. The local workbook and reports are not published here.
 
 No annual-report scores or regression estimates have yet been produced. The 139 Orbis results are a preliminary search outcome, not a confirmed count of currently listed issuers.
+
+## Troubleshooting and retry behavior
+
+The classifier uses two JPEG pages (pages 1 and 6 where present) at reduced resolution, limits the model's generated tokens and uses a 180-second request timeout. A 403 download error is recorded rather than treated as a valid classification. The script now writes `scores.csv` after each attempt so earlier outcomes are preserved. `--limit 2` means *attempt the first two companies*, regardless of success.
+
+To retry one company (for example, Novo Nordisk), create a local single-row CSV manifest with its original `company_name,bvd_id,report_url,report_year`. Use `--manifest name.csv --limit 1` and place any manually downloaded PDF under `reports/<bvd_id>.pdf`. It will be reused instead of downloaded. Check the generated score manually before running the full sample. These improvements reduce model workload but do not guarantee local machine capacity or accuracy; testing remains necessary.
