@@ -49,22 +49,22 @@ def download(url, path):
     if not data.startswith(b'%PDF'): raise ValueError('URL did not return PDF')
     path.write_bytes(data)
 
-def score_pdf(path):
+def score_pdf(path, fast=False):
     # Process only two lower-resolution pages per request to avoid oversized prompts.
     # The same page-selection rule is applied to every company.
     with pymupdf.open(path) as doc:
         if not len(doc): raise ValueError('Empty PDF')
-        ids=sorted(set(min(x,len(doc)-1) for x in [0,5]))
+        ids=sorted(set(min(x,len(doc)-1) for x in ([0] if fast else [0,5])))
         imgs=[]
         for i in ids:
             page=doc[i]
-            pix=page.get_pixmap(matrix=pymupdf.Matrix(0.65,0.65),alpha=False)
-            imgs.append(base64.b64encode(pix.tobytes('jpeg',jpg_quality=65)).decode('ascii'))
+            pix=page.get_pixmap(matrix=pymupdf.Matrix(0.40 if fast else 0.65,0.40 if fast else 0.65),alpha=False)
+            imgs.append(base64.b64encode(pix.tobytes('jpeg',jpg_quality=45 if fast else 65)).decode('ascii'))
     prompt=('Evaluate these annual report page images using the rubric: '+RUBRIC+
         ' Respond as JSON only, with integer fields graphic_design, typography, '+
         'photography_illustrations, charts_visualization, layout_storytelling '+
         'from 1 to 5, and a short rationale. Do not compute a final score.')
-    reply=chat(prompt,imgs,timeout=180)
+    reply=chat(prompt,imgs,timeout=90 if fast else 180)
     try:
         result=json.loads(reply)
     except json.JSONDecodeError:
@@ -85,11 +85,20 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument('--manifest',default=str(ROOT/'report_manifest.csv'))
     ap.add_argument('--limit',type=int,default=0)
+    ap.add_argument('--fast',action='store_true',help='Pilot only: use one highly compressed cover page; scores are not final')
+    ap.add_argument('--reuse-definition',action='store_true',help='Reuse previously reviewed definition file (only if already approved)')
     args=ap.parse_args()
     with open(args.manifest,encoding='utf-8-sig',newline='') as f: rows=list(csv.DictReader(f))
     if args.limit < 0: raise ValueError('--limit must be zero or positive')
     if args.limit: rows=rows[:args.limit]
-    approve()
+    if args.reuse_definition:
+        file=ROOT/'fanciness_definition.txt'
+        if not file.exists(): raise SystemExit('No earlier definition found; remove --reuse-definition')
+        print('Reusing saved model definition. Confirm this was reviewed and approved earlier.')
+        if input('Type YES to continue: ').strip() != 'YES': raise SystemExit('Not approved')
+    else:
+        approve()
+    if args.fast: print('FAST PILOT: One cover page only. Scores NOT suitable as final assignment data.')
     output=[]; complete=0
     for row in rows:
         ident=row['bvd_id']; url=row.get('report_url','').strip()
@@ -99,7 +108,7 @@ def main():
             if not path.is_file():
                 if not url: raise ValueError('Missing report URL and PDF')
                 download(url,path)
-            val,weighted,rationale,pages,dimensions=score_pdf(path)
+            val,weighted,rationale,pages,dimensions=score_pdf(path,fast=args.fast)
             entry.update(fanciness=val,weighted_score=weighted,**dimensions,rationale=rationale,pages_reviewed=pages,status='scored')
             complete+=1
             print(ident,row['company_name'],val,pages)
