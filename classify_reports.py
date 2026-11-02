@@ -4,7 +4,7 @@ Classification does not access company profit data.
 import argparse, base64, csv, json, re, time
 from pathlib import Path
 from urllib.parse import urlparse
-import fitz
+import pymupdf
 import requests
 
 ROOT=Path(__file__).resolve().parent
@@ -20,12 +20,12 @@ Do not expect motion, interactivity, or animations in a static PDF.
 An absent visual element should be judged by the quality and suitability of the actual design,
 not automatically scored 1. Base all scores on the inspected pages, not assumptions.'''
 
-def chat(text, images=None):
+def chat(text, images=None, timeout=180):
     msg={'role':'user','content':text}
     if images: msg['images']=images
     r=requests.post('http://127.0.0.1:11434/api/chat',json={
       'model':'gemma3:4b','stream':False,'messages':[msg],
-      'options':{'temperature':0}},timeout=360)
+      'options':{'temperature':0,'num_predict':450}},timeout=timeout)
     r.raise_for_status()
     return r.json()['message']['content']
 
@@ -50,18 +50,27 @@ def download(url, path):
     path.write_bytes(data)
 
 def score_pdf(path):
-    with fitz.open(path) as doc:
+    # Process only two lower-resolution pages per request to avoid oversized prompts.
+    # The same page-selection rule is applied to every company.
+    with pymupdf.open(path) as doc:
         if not len(doc): raise ValueError('Empty PDF')
-        ids=sorted(set(min(x,len(doc)-1) for x in [0,2,5,9]))
-        imgs=[base64.b64encode(doc[i].get_pixmap(matrix=fitz.Matrix(1.2,1.2),alpha=False).tobytes('png')).decode() for i in ids]
-    reply=chat('Evaluate the annual report visuals using this approved rubric: '+RUBRIC+
-        ' Return ONLY a JSON object with five integer scores from 1 to 5 named '+
-        'graphic_design, typography, photography_illustrations, charts_visualization, '+
-        'layout_storytelling, plus a brief rationale grounded in visible pages. '+
-        'Do not give a final combined score; it will be calculated in Python.', imgs)
-    match=re.search(r'\\{[\\s\\S]*\\}',reply)
-    if not match: raise ValueError('No JSON result: '+reply[:100])
-    result=json.loads(match.group(0))
+        ids=sorted(set(min(x,len(doc)-1) for x in [0,5]))
+        imgs=[]
+        for i in ids:
+            page=doc[i]
+            pix=page.get_pixmap(matrix=pymupdf.Matrix(0.65,0.65),alpha=False)
+            imgs.append(base64.b64encode(pix.tobytes('jpeg',jpg_quality=65)).decode('ascii'))
+    prompt=('Evaluate these annual report page images using the rubric: '+RUBRIC+
+        ' Respond as JSON only, with integer fields graphic_design, typography, '+
+        'photography_illustrations, charts_visualization, layout_storytelling '+
+        'from 1 to 5, and a short rationale. Do not compute a final score.')
+    reply=chat(prompt,imgs,timeout=180)
+    try:
+        result=json.loads(reply)
+    except json.JSONDecodeError:
+        match=re.search(r'\{[\s\S]*?\}',reply)
+        if not match: raise ValueError('Model returned no JSON: '+reply[:100])
+        result=json.loads(match.group())
     weights={'graphic_design':.25,'typography':.20,'photography_illustrations':.20,
              'charts_visualization':.15,'layout_storytelling':.20}
     for key in weights:
@@ -78,6 +87,8 @@ def main():
     ap.add_argument('--limit',type=int,default=0)
     args=ap.parse_args()
     with open(args.manifest,encoding='utf-8-sig',newline='') as f: rows=list(csv.DictReader(f))
+    if args.limit < 0: raise ValueError('--limit must be zero or positive')
+    if args.limit: rows=rows[:args.limit]
     approve()
     output=[]; complete=0
     for row in rows:
@@ -96,11 +107,14 @@ def main():
             entry['status']='error: '+str(ex)[:160]
             print(ident,entry['status'])
         output.append(entry)
-        if args.limit and complete>=args.limit: break
+        # Write progress after every attempt, including failures.
+        with (ROOT/'scores.csv').open('w',encoding='utf-8',newline='') as f:
+            fields=list(dict.fromkeys([*rows[0].keys(),'fanciness','weighted_score','graphic_design','typography','photography_illustrations','charts_visualization','layout_storytelling','pages_reviewed','rationale','status']))
+            writer=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore');writer.writeheader();writer.writerows(output)
         time.sleep(0.3)
     with (ROOT/'scores.csv').open('w',encoding='utf-8',newline='') as f:
         fields=list(dict.fromkeys([*rows[0].keys(),'fanciness','weighted_score','graphic_design','typography','photography_illustrations','charts_visualization','layout_storytelling','pages_reviewed','rationale','status'])) if rows else ['bvd_id','fanciness','status']
         writer=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore');writer.writeheader();writer.writerows(output)
-    print('Scored',complete,'reports. Results saved locally to scores.csv')
+    print('Attempted',len(output),'companies; scored',complete,'reports. Results saved locally to scores.csv')
 
 if __name__=='__main__':main()
