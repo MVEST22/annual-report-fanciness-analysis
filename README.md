@@ -83,3 +83,9 @@ To retry one company (for example, Novo Nordisk), create a local single-row CSV 
 ## Multi-company Colab batches
 
 The notebook now contains an optional **Batch processing with checkpoints** section. It accepts an archive of verified annual-report PDFs named by BvD ID, invokes `batch_classify.py`, saves `batch_scores.csv` after each company, and supports restarting without rescoring previous successful records. Checkpoint CSVs and the ZIP of public report PDFs remain local to the Colab session until downloaded. **Do not commit Orbis exports or private licensed data.** The pilot score for Vestas used pages 1 and 6; the updated final classifier samples page 1, page 6, the middle, and the later portion of each report. Re-score Vestas with the final methodology before pooling results.
+
+## Bulk annual-report collection (Section 8 in Colab)
+
+The Google Colab notebook includes a **Bulk report discovery and download** section. Upload the separate 139-company **names/identifiers-only** manifest, run `discover_reports.py` to propose public PDF candidates, then **manually verify issuer, financial year, and current listing** before putting approved URLs and years into your local manifest. Run `download_reports.py --manifest report_manifest.csv --limit 5` to test downloads (or omit `--limit` once verified). It saves verified PDF bytes to `reports/<bvd_id>.pdf` and an audit log `download_log.csv`. Blocked links (e.g. HTTP 403), missing URLs, and non-PDF downloads remain flagged; they are not silently accepted. The notebook can export a ZIP of successful PDFs, and Section 7 handles resume-safe scoring. Do **not** upload licensed Orbis financial data to Colab or GitHub.
+
+These tools do not themselves prove that all 139 Orbis results are active Copenhagen-listed companies, and no comprehensive annual-report collection has yet been completed. The financial and design dataset must be joined and regression run only once the valid report sample is ready.
